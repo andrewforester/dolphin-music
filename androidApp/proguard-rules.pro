@@ -1,0 +1,2 @@
+-keep class io.elevenlabs.** { *; }
+-keep class io.livekit.** { *; }

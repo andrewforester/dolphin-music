@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="splash_background">#FF5EC7CB</color>
+
+    <style name="Theme.VoiceProducer" parent="@android:style/Theme.Material.Light.NoActionBar" />
+
+    <style name="Theme.VoiceProducer.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_orb</item>
+        <item name="postSplashScreenTheme">@style/Theme.VoiceProducer</item>
+    </style>
+</resources>

@@ -1,0 +1,63 @@
+name: Nightly
+
+on:
+  schedule:
+    - cron: "17 2 * * 1-5"
+  workflow_dispatch:
+
+concurrency:
+  group: nightly
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  android-release:
+    name: Android release build
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - name: CI Gradle properties
+        run: mkdir -p ~/.gradle && cp .github/ci-gradle.properties ~/.gradle/gradle.properties
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+      - name: Release APK and bundle (R8), release lint
+        run: ./gradlew :androidApp:assembleRelease :androidApp:bundleRelease :androidApp:lintRelease
+      - uses: actions/upload-artifact@v7
+        with:
+          name: android-release
+          path: |
+            androidApp/build/outputs/apk/release/*.apk
+            androidApp/build/outputs/bundle/release/*.aab
+          retention-days: 7
+
+  ios-release:
+    name: iOS release build
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - name: CI Gradle properties
+        run: mkdir -p ~/.gradle && cp .github/ci-gradle.properties ~/.gradle/gradle.properties
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+      - name: Empty secrets for the Xcode project
+        run: printf 'PROXY_BASE_URL =\n' > iosApp/Secrets.xcconfig
+      - name: Generate the Xcode project
+        run: brew install xcodegen && cd iosApp && xcodegen generate
+      - name: Release build for devices
+        run: >
+          xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -configuration Release
+          -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build

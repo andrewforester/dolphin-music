@@ -1,0 +1,180 @@
+name: CI
+
+on:
+  pull_request:
+  merge_group:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: Changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      code: ${{ github.event_name != 'pull_request' || steps.code.outputs.code == 'true' }}
+      ios: ${{ github.event_name != 'pull_request' || steps.ios.outputs.ios == 'true' }}
+      supabase: ${{ github.event_name != 'pull_request' || steps.supabase.outputs.supabase == 'true' }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: code
+        if: github.event_name == 'pull_request'
+        uses: dorny/paths-filter@v4
+        with:
+          predicate-quantifier: every
+          filters: |
+            code:
+              - '**'
+              - '!**/*.md'
+              - '!docs/**'
+              - '!supabase/**'
+              - '!agent/**'
+      - id: ios
+        if: github.event_name == 'pull_request'
+        uses: dorny/paths-filter@v4
+        with:
+          filters: |
+            ios:
+              - 'core/**'
+              - 'feature/**'
+              - 'composeApp/**'
+              - 'iosApp/**'
+              - 'build-logic/**'
+              - 'gradle/**'
+              - '*.gradle.kts'
+              - 'gradle.properties'
+              - '.github/workflows/ci.yml'
+      - id: supabase
+        if: github.event_name == 'pull_request'
+        uses: dorny/paths-filter@v4
+        with:
+          filters: |
+            supabase:
+              - 'supabase/**'
+              - 'agent/**'
+              - '.github/workflows/ci.yml'
+
+  gates:
+    name: Gates
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    env:
+      SAME_REPO_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.SAME_REPO_PR == 'true' && github.event.pull_request.head.ref || '' }}
+      - name: CI Gradle properties
+        run: mkdir -p ~/.gradle && cp .github/ci-gradle.properties ~/.gradle/gradle.properties
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      - name: Android unit tests and screenshot comparison
+        id: screenshots
+        continue-on-error: true
+        run: ./gradlew :androidApp:verifyRoborazziDebug
+      - name: Re-record screenshots
+        id: record
+        if: steps.screenshots.outcome == 'failure' && env.SAME_REPO_PR == 'true'
+        run: ./gradlew :androidApp:recordRoborazziDebug
+      - name: Commit re-recorded screenshots
+        id: commit
+        if: steps.record.outcome == 'success'
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          file_pattern: 'androidApp/src/test/screenshots/*.png'
+          commit_message: 'test(screenshots): re-record goldens on CI'
+
+      - name: All gates
+        run: ./gradlew verify --continue
+
+      - name: Ask for a review of the new screenshots
+        if: steps.commit.outputs.changes_detected == 'true'
+        run: |
+          echo "::error::Screenshots changed. CI committed new goldens to this branch: review the PNG diff in the PR, then push to run CI on the new commit."
+          exit 1
+
+      - name: Upload reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: reports
+          if-no-files-found: ignore
+          path: |
+            **/build/reports/detekt/
+            **/build/reports/lint-results-*.html
+            **/build/reports/tests/
+            **/build/test-results/**/*.xml
+            **/build/outputs/roborazzi/*_compare.png
+
+  ios:
+    name: iOS
+    needs: changes
+    if: needs.changes.outputs.ios == 'true'
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - name: CI Gradle properties
+        run: mkdir -p ~/.gradle && cp .github/ci-gradle.properties ~/.gradle/gradle.properties
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+      - name: Shared tests on the iOS simulator
+        run: ./gradlew iosSimulatorArm64Test
+      - name: Empty secrets for the Xcode project
+        run: printf 'PROXY_BASE_URL =\n' > iosApp/Secrets.xcconfig
+      - name: Generate the Xcode project
+        run: brew install xcodegen && cd iosApp && xcodegen generate
+      - name: Build the app
+        run: >
+          xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -configuration Debug
+          -sdk iphonesimulator -destination 'generic/platform=iOS Simulator'
+          ARCHS=arm64 ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO build
+
+  supabase:
+    name: Supabase
+    needs: changes
+    if: needs.changes.outputs.supabase == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: deno test supabase/functions
+
+  ci-status:
+    name: CI status
+    if: always()
+    needs: [changes, gates, ios, supabase]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify job results
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: |
+          echo "::error::A required job failed or was cancelled."
+          exit 1

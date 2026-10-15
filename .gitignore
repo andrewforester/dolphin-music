@@ -1,0 +1,17 @@
+.DS_Store
+.env
+*.env.local
+local.properties
+.gradle/
+build/
+.idea/
+*.iml
+.kotlin/
+.superpowers/
+supabase/.temp/
+CLAUDE.local.md
+.local/
+
+iosApp/Secrets.xcconfig
+iosApp/*.xcodeproj
+iosApp/build/

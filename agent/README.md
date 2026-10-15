@@ -1,0 +1,10 @@
+# Composer agent
+
+ElevenLabs conversational agent "Composer" (an experienced composer in a live studio session) with 4 client tools (`compose_track`, `edit_section`, `set_global`, `undo_edit`) and the built-in `skip_turn` system tool.
+
+The canonical config is TypeScript (a single source of truth, imported by the function so the bundle is self-contained) and lives in `supabase/functions/_shared/agent/` (Supabase bundles only `supabase/functions/**`). The `agent-token` function reads them and brings the live agent to this config before minting a token (see `supabase/README.md`, "Agent sync"); this directory holds the creation script only. The sync fills in the LLM and the voice only when the agent has none, so they are changed in the ElevenLabs dashboard.
+
+- `supabase/functions/_shared/agent/agent.ts`: target agent config. LLM `claude-sonnet-5-5`, `plan` dynamic variable (compact text plan) with a placeholder default, auth enabled, patient turn-taking with silence auto-end after 30 s (`silence_end_call_timeout`), `skip_turn` built-in tool, `client_events` (incl. `tentative_user_transcript`, `vad_score`, `agent_response_correction`), TTS model/settings, and the default LLM and voice (the premade "Roger"), client overrides allowed for `agent.first_message` and `conversation.text_only`.
+- `supabase/functions/_shared/agent/prompt.ts`: system prompt (Personality, Environment, Tone, Goal, Guardrails); its Environment section carries `Plan at the start of this session: {{plan}}`.
+- `supabase/functions/_shared/agent/tools.ts`: the `tool_config` of each tool (`POST /v1/convai/tools` takes `{tool_config}`). All client tools, `expects_response: true`, `response_timeout_secs: 10`; `pre_tool_speech: "off"` for `compose_track`, `edit_section`, `set_global`. `compose_track.length_s` is optional.
+- `scripts/create-agent.sh`: creates the tools and the agent, prints the agent id. Renders the TS modules to JSON with `deno eval`. Needs `deno`, `jq`, `curl` and `ELEVENLABS_API_KEY` with the `convai_write` permission. Creates new objects on each run, deletes nothing. Used once per account; afterwards the `agent-token` sync keeps the agent up to date.

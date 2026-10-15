@@ -1,0 +1,16 @@
+project_id = "voice-producer"
+
+[functions.music-plan]
+verify_jwt = false
+
+[functions.music-compose]
+verify_jwt = false
+
+[functions.agent-token]
+verify_jwt = false
+
+[functions.agent-conversation]
+verify_jwt = false
+
+[functions.access]
+verify_jwt = false
