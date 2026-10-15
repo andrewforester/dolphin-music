@@ -549,6 +549,7 @@ Manifest components go into the module's `androidMain` manifest; the merged mani
 |---|---|---|
 | Every push to a PR, the merge queue, `main` | `ci.yml` | `Changes` → `Gates` (Ubuntu, `./gradlew verify`), `iOS` (macOS, simulator tests and app build) and `Supabase` (`deno test supabase/functions`) → `CI status` |
 | Weekday nights, by hand | `nightly.yml` | R8 release APK and bundle, release lint, iOS release build |
+| Tag `v*.*.*` | `release.yml` | Signed R8 release APK for `arm64-v8a`, version from the tag, GitHub release with the APK |
 
 - **Path filters.** On a PR, `Gates` is skipped when only Markdown, `docs/`, `supabase/` or `agent/` changed;
   `iOS` runs only when `core/`, `feature/`, `composeApp/`, `iosApp/`, the build or `ci.yml` changed; `Supabase`
@@ -561,16 +562,22 @@ Manifest components go into the module's `androidMain` manifest; the merged mani
   the branch and fail.
 - **Reports.** Every `Gates` run uploads the `reports` artifact: detekt, lint, test results, screenshot comparisons.
 - **Secrets.** `GRADLE_ENCRYPTION_KEY` encrypts the cached configuration cache; the workflows pass it to
-  `setup-gradle` and run without it. No workflow uses another secret: the Android build takes the proxy URL from
-  `gradle.properties` and builds with no access code; the iOS jobs write `iosApp/Secrets.xcconfig` with an empty
-  URL. No workflow publishes a build: the nightly artifacts are unsigned, carry no access code, and expire after 7
-  days.
+  `setup-gradle` and run without it. The Android build takes the proxy URL from `gradle.properties` and builds with no
+  access code; the iOS jobs write `iosApp/Secrets.xcconfig` with an empty URL. Only `release.yml` uses more secrets:
+  `ANDROID_KEYSTORE_BASE64` (decoded to `$RUNNER_TEMP/release.jks`), `ANDROID_KEYSTORE_PASSWORD`,
+  `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD`. The nightly artifacts are unsigned, carry no access code, and expire
+  after 7 days.
 - **Release signing.** `androidApp` signs the `release` build type when `signing.storeFile`, `signing.storePassword`,
   `signing.keyAlias` and `signing.keyPassword` (from `local.properties`) or `ANDROID_KEYSTORE_PATH`,
   `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD` (environment) are all set; without
   them the release APK stays unsigned. The keystore and its passwords are never committed.
 - **Release version.** `androidApp` takes `versionName` and `versionCode` from the Gradle properties of the same
-  name (defaults `0.1.0` and `1`).
+  name (defaults `0.1.0` and `1`); `release.yml` derives them from the tag (`major * 10000 + minor * 100 + patch`).
+- **Release assets.** A tag release carries `dolphin-<version>-arm64.apk`, checked with `apksigner verify`. It holds
+  no secret: the person enters an access code on first start.
+- **ABI filter.** The `abiFilters` Gradle property (comma-separated, read by `template.android.application`) limits
+  the packaged native libraries; `release.yml` passes `arm64-v8a`. Without it every ABI is packaged, so local builds
+  run on emulators.
 - **CI Gradle settings** are in `.github/ci-gradle.properties`, copied to `~/.gradle/gradle.properties` by each job.
 - **PR description** follows `.github/pull_request_template.md`.
 

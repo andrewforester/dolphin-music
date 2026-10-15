@@ -21,6 +21,11 @@ vocals"): only the edited section is regenerated and swapped in while the music 
   <img src="docs/screenshots/ios.jpg" width="200" alt="iOS: the access code sheet on first start">
 </p>
 
+## Download
+
+The Android APK (arm64) is attached to the [latest release](../../releases/latest). On first start the app asks for
+an access code, which the author hands out.
+
 ## Run your own
 
 The app talks to ElevenLabs through a small Supabase proxy. The build points at the author's proxy; it asks for an

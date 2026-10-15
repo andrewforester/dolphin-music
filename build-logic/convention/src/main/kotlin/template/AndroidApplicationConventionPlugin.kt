@@ -20,6 +20,13 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
                 defaultConfig {
                     minSdk = intVersion("android-minSdk")
                     targetSdk = intVersion("android-targetSdk")
+                    providers
+                        .gradleProperty("abiFilters")
+                        .orNull
+                        ?.split(',')
+                        ?.map(String::trim)
+                        ?.filter(String::isNotEmpty)
+                        ?.let { ndk { abiFilters += it } }
                 }
                 buildFeatures { compose = true }
                 compileOptions {
