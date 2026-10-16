@@ -44,6 +44,11 @@ sealed interface TranscriptItem {
     ) : TranscriptItem
 }
 
+data class AgentSpeech(
+    val itemId: Long,
+    val timeline: SpeechTimeline,
+)
+
 enum class ToolKind { Compose, EditSection, SetGlobal, Undo, NewTrack }
 
 enum class ToolStatus { Running, Done, Failed }
@@ -85,6 +90,7 @@ data class ProducerUiState(
     val micPermission: Boolean = false,
     val transcript: List<TranscriptItem> = emptyList(),
     val liveUserText: String? = null,
+    val agentSpeech: AgentSpeech? = null,
     val chips: List<StyleChip> = emptyList(),
     val musicLevel: Float = 1f,
     val ducked: Boolean = false,

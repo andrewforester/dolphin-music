@@ -109,6 +109,7 @@ fun ProducerScreen(
                     liveUserText = state.liveUserText,
                     agentConnected = state.agent.state != AgentState.Disconnected,
                     agentSpeaking = state.agent.state == AgentState.Speaking,
+                    speech = state.agentSpeech,
                 )
             }
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {

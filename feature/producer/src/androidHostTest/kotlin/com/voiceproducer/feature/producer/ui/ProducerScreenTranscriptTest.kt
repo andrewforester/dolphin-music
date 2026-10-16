@@ -23,14 +23,17 @@ import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.dp
+import com.voiceproducer.core.domain.agent.AgentEvent
 import com.voiceproducer.core.domain.agent.AgentState
 import com.voiceproducer.core.model.ApiLogEntry
 import com.voiceproducer.feature.producer.AgentActivity
+import com.voiceproducer.feature.producer.AgentSpeech
 import com.voiceproducer.feature.producer.AgentUi
 import com.voiceproducer.feature.producer.ProducerIntent
 import com.voiceproducer.feature.producer.ProducerUiState
 import com.voiceproducer.feature.producer.SectionStatus
 import com.voiceproducer.feature.producer.SectionUi
+import com.voiceproducer.feature.producer.SpeechTimeline
 import com.voiceproducer.feature.producer.StyleChip
 import com.voiceproducer.feature.producer.ToolKind
 import com.voiceproducer.feature.producer.ToolStatus
@@ -127,6 +130,66 @@ class ProducerScreenTranscriptTest : ProducerScreenTestBase() {
         rule.onNodeWithTag("transcript-revealing").assertDoesNotExist()
         rule.onNodeWithText(reply).assertExists()
         current.value = speaking(listOf(TranscriptItem.Agent(1, reply)))
+        rule.mainClock.advanceTimeBy(100)
+        rule.onNodeWithTag("transcript-revealing").assertDoesNotExist()
+        rule.onNodeWithText(reply).assertExists()
+    }
+
+    private val timedReply =
+        SpeechTimeline() +
+            AgentEvent.SpeechChunk(1, "Reworking ", List(10) { it * 100 }, 1_500) +
+            AgentEvent.SpeechChunk(1, "the ", List(4) { it * 100 }, 1_500) +
+            AgentEvent.SpeechChunk(1, "chorus", List(6) { it * 50 }, 500)
+
+    private fun timed(
+        speaking: Boolean = true,
+        timeline: SpeechTimeline? = timedReply,
+    ) = speaking(listOf(TranscriptItem.Agent(1, reply)), speaking).copy(agentSpeech = timeline?.let { AgentSpeech(1, it) })
+
+    @Test
+    fun replyFollowsTheTimingOfItsSpeech() {
+        rule.mainClock.autoAdvance = false
+        val current = mutableStateOf(speaking(emptyList()))
+        rule.setContent { ProducerScreen(current.value, onIntent = {}) }
+        rule.mainClock.advanceTimeByFrame()
+        current.value = timed()
+        rule.mainClock.advanceTimeBy(1_300)
+        rule.onNodeWithTag("transcript-revealing").assertTextEquals("Reworking")
+        rule.mainClock.advanceTimeBy(400)
+        rule.onNodeWithTag("transcript-revealing").assertTextEquals("Reworking the")
+        rule.mainClock.advanceTimeBy(1_500)
+        rule.onNodeWithTag("transcript-revealing").assertTextEquals("Reworking the chorus")
+    }
+
+    @Test
+    fun aPauseInsideATimedReplyDoesNotEndTheReveal() {
+        rule.mainClock.autoAdvance = false
+        val current = mutableStateOf(speaking(emptyList()))
+        rule.setContent { ProducerScreen(current.value, onIntent = {}) }
+        rule.mainClock.advanceTimeByFrame()
+        current.value = timed()
+        rule.mainClock.advanceTimeBy(1_300)
+        current.value = timed(speaking = false)
+        rule.mainClock.advanceTimeBy(400)
+        rule.onNodeWithTag("transcript-revealing").assertTextEquals("Reworking the")
+        current.value = timed()
+        rule.mainClock.advanceTimeBy(1_500)
+        rule.onNodeWithTag("transcript-revealing").assertTextEquals("Reworking the chorus")
+    }
+
+    @Test
+    fun aTimedReplyShowsInFullOnceItsSpeechIsOverAndTheAgentIsQuiet() {
+        rule.mainClock.autoAdvance = false
+        val current = mutableStateOf(speaking(emptyList()))
+        rule.setContent { ProducerScreen(current.value, onIntent = {}) }
+        rule.mainClock.advanceTimeByFrame()
+        current.value = timed()
+        rule.mainClock.advanceTimeBy(3_600)
+        rule.onNodeWithTag("transcript-revealing").assertTextEquals("Reworking the chorus")
+        current.value = timed(speaking = false)
+        rule.mainClock.advanceTimeBy(100)
+        rule.onNodeWithTag("transcript-revealing").assertTextEquals(reply)
+        current.value = timed(speaking = false, timeline = null)
         rule.mainClock.advanceTimeBy(100)
         rule.onNodeWithTag("transcript-revealing").assertDoesNotExist()
         rule.onNodeWithText(reply).assertExists()

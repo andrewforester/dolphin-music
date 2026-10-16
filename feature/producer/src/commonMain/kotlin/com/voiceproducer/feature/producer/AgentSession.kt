@@ -47,6 +47,8 @@ internal class AgentSession(
 
     private var conversationId: String? = null
 
+    private val replySpeech = ReplySpeech(state)
+
     fun toggle() {
         state.update { it.copy(agent = it.agent.copy(error = null)) }
         val connecting = agentJob?.takeIf { it.isActive }
@@ -139,6 +141,7 @@ internal class AgentSession(
                 agentActivity = activity(s, awaitingReply, connectPending),
                 userVoiceLevel = if (s == AgentState.Disconnected) 0f else it.userVoiceLevel,
                 liveUserText = if (s == AgentState.Disconnected || s == AgentState.Speaking) null else it.liveUserText,
+                agentSpeech = if (s == AgentState.Disconnected) null else it.agentSpeech,
             )
         }
         duck.onStateChanged(s)
@@ -170,10 +173,15 @@ internal class AgentSession(
             is AgentEvent.TentativeTranscript -> {
                 state.update { it.copy(liveUserText = event.text) }
             }
+
+            is AgentEvent.SpeechChunk -> {
+                replySpeech.onChunk(event)
+            }
         }
     }
 
     private fun onUserTranscript(event: AgentEvent.UserTranscript) {
+        replySpeech.end()
         val s = agent.state.value
         if (s != AgentState.Disconnected && s != AgentState.Speaking) awaitingReply = true
         state.update {
@@ -198,6 +206,7 @@ internal class AgentSession(
             )
         }
         transcript.store(state.value.transcript.last())
+        replySpeech.onReply(event.eventId)
     }
 }
 

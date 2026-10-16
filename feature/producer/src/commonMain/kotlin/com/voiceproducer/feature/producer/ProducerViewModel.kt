@@ -303,6 +303,7 @@ class ProducerViewModel(
                             canUndo = false,
                             chips = emptyList(),
                             liveUserText = null,
+                            agentSpeech = null,
                             transcript = emptyList(),
                         )
                     }
