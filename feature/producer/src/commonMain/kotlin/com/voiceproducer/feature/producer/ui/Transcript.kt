@@ -40,6 +40,8 @@ import com.voiceproducer.core.designsystem.Palette
 import com.voiceproducer.core.designsystem.glass
 import com.voiceproducer.core.designsystem.mono
 import com.voiceproducer.core.designsystem.sans
+import com.voiceproducer.feature.producer.AgentSpeech
+import com.voiceproducer.feature.producer.SpeechTimeline
 import com.voiceproducer.feature.producer.ToolStatus
 import com.voiceproducer.feature.producer.TranscriptItem
 import com.voiceproducer.feature.producer.revealedText
@@ -61,10 +63,12 @@ internal fun TranscriptCard(
     liveUserText: String? = null,
     agentConnected: Boolean = false,
     agentSpeaking: Boolean = false,
+    speech: AgentSpeech? = null,
 ) {
     val list = rememberLazyListState()
     val newestAgentId = items.lastOrNull { it is TranscriptItem.Agent }?.id
-    val revealingId = rememberRevealingId(newestAgentId, agentConnected, agentSpeaking)
+    val timed = speech != null && speech.itemId == newestAgentId
+    val revealingId = rememberRevealingId(newestAgentId, agentConnected, agentSpeaking, timed)
     val count = items.size + (if (liveUserText != null) 1 else 0)
     FollowNewest(list, items.lastOrNull(), liveUserText, count)
     LazyColumn(
@@ -83,7 +87,12 @@ internal fun TranscriptCard(
                 }
 
                 is TranscriptItem.Agent -> {
-                    AgentLine(item.text, revealing = item.id == revealingId, speaking = agentSpeaking)
+                    AgentLine(
+                        item.text,
+                        revealing = item.id == revealingId,
+                        speaking = agentSpeaking,
+                        timeline = speech?.takeIf { it.itemId == item.id }?.timeline,
+                    )
                 }
 
                 is TranscriptItem.Tool -> {
@@ -106,10 +115,11 @@ private fun rememberRevealingId(
     newestAgentId: Long?,
     agentConnected: Boolean,
     agentSpeaking: Boolean,
+    timed: Boolean,
 ): Long? {
     val newest by rememberUpdatedState(newestAgentId)
     var heardId by remember { mutableStateOf<Long?>(null) }
-    LaunchedEffect(agentSpeaking) { if (!agentSpeaking) heardId = newest }
+    LaunchedEffect(agentSpeaking, timed) { if (!agentSpeaking && !timed) heardId = newest }
     LaunchedEffect(newestAgentId, agentConnected, agentSpeaking) {
         if (!agentConnected && !agentSpeaking) heardId = newestAgentId
     }
@@ -188,11 +198,12 @@ private fun AgentLine(
     text: String,
     revealing: Boolean,
     speaking: Boolean,
+    timeline: SpeechTimeline?,
 ) {
     Column(Modifier.fillMaxWidth(0.94f).testTag("transcript-agent"), verticalArrangement = Arrangement.spacedBy(3.dp)) {
         Text("Composer", style = mono(10.sp, 500, Palette.ComposerLabel))
         val style = sans(17.sp, 500, lineHeight = 1.45f)
-        if (revealing) RevealingText(text, style, speaking) else Text(text, style = style)
+        if (revealing) RevealingText(text, style, speaking, timeline) else Text(text, style = style)
     }
 }
 
@@ -201,21 +212,30 @@ private fun RevealingText(
     text: String,
     style: TextStyle,
     speaking: Boolean,
+    timeline: SpeechTimeline?,
 ) {
     val total = remember(text) { wordCount(text) }
     val currentTotal by rememberUpdatedState(total)
+    val currentTimeline by rememberUpdatedState(timeline)
+    val currentSpeaking by rememberUpdatedState(speaking)
     val elapsed = remember { mutableLongStateOf(0L) }
     val start = remember { longArrayOf(-1L) }
+
+    fun shown(): Int {
+        val speech = currentTimeline
+        val over = speech != null && !currentSpeaking && elapsed.longValue >= speech.endMs
+        return if (over) currentTotal else revealedWords(currentTotal, elapsed.longValue, speech)
+    }
     LaunchedEffect(total, speaking) {
         if (!speaking && start[0] < 0) return@LaunchedEffect
-        while (revealedWords(total, elapsed.longValue) < total) {
+        while (shown() < currentTotal) {
             withFrameMillis { now ->
                 if (start[0] < 0) start[0] = now
                 elapsed.longValue = now - start[0]
             }
         }
     }
-    val words by remember { derivedStateOf { revealedWords(currentTotal, elapsed.longValue) } }
+    val words by remember { derivedStateOf { shown() } }
     Text(revealedText(text, words), style = style, modifier = Modifier.testTag("transcript-revealing"))
 }
 

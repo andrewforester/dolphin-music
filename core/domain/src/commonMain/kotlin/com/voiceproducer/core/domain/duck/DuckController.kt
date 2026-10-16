@@ -27,8 +27,15 @@ class DuckController {
         val isSpeech =
             when (event) {
                 is AgentEvent.VadScore -> event.score > VAD_SPEECH_THRESHOLD
+
                 is AgentEvent.TentativeTranscript -> true
-                is AgentEvent.UserTranscript, is AgentEvent.AgentText, is AgentEvent.Error, AgentEvent.Refused -> false
+
+                is AgentEvent.UserTranscript,
+                is AgentEvent.AgentText,
+                is AgentEvent.SpeechChunk,
+                is AgentEvent.Error,
+                AgentEvent.Refused,
+                -> false
             }
         if (isSpeech) lastSpeechSignalMs = nowMs
     }

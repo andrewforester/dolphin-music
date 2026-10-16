@@ -141,7 +141,7 @@ ExoPlayer on Android.
 
 | Source set | Contains |
 |---|---|
-| `androidMain` | `ElevenLabsVoiceAgent` (implements `VoiceAgent` over the ElevenLabs Android SDK) with `AgentStatePublisher` and `SdkSessions`, `ToolBridge` (client tools to `ToolHandler`), `AudioModeRestorer` |
+| `androidMain` | `ElevenLabsVoiceAgent` (implements `VoiceAgent` over the ElevenLabs Android SDK) with `AgentStatePublisher` and `SdkSessions`, `ToolBridge` (client tools to `ToolHandler`), `speechChunk` (audio alignment to `AgentEvent.SpeechChunk`), `AudioModeRestorer` |
 | `iosMain` | `IosVoiceAgent` (implements `VoiceAgent` over `AgentBridge`), `AgentBridge`, `AgentBridgeListener`, `BridgeStatus` (implemented in Swift by `ElevenLabsAgentBridge` over the ElevenLabs Swift SDK), `ToolParams` |
 | `commonMain` | `AgentConfig(demo)`; `demo/` — `DemoVoiceAgent` (a scripted session: no token, no tools), `SwitchableVoiceAgent` (implements `VoiceAgent` and `DemoSwitch`; runs each session on the real or the demo agent), `VoiceAgent.withDemo(demo, scope)`; and `di/agentModule` (`expect`/`actual`): binds `VoiceAgent` as an app-scoped singleton; the Android `actual` builds `ElevenLabsVoiceAgent` with `androidContext()` and `AppScope`; the iOS `actual` builds `IosVoiceAgent` from the `AgentBridge` the app provides; both wrap it with `withDemo` from `AgentConfig` |
 
@@ -164,7 +164,7 @@ Grotesk 400, 500, 600, 700, 800 and JetBrains Mono 400, 500. Android resources a
 The producer screen. `ProducerViewModel` with `TranscriptLog` (transcript and its stored conversation, including the
 notice line of a failed section), `SectionTracker` (section versions and queued swaps), `AgentSession` (agent session
 and events), `PlayheadNotices` (the playhead sent to a connected agent on connect, section change, seek and
-play/pause) and `DuckPresenter`; `ProducerUiState` / `ProducerIntent`; `ProducerUiMapping`, `TranscriptLines`,
+play/pause) and `DuckPresenter`; `ProducerUiState` / `ProducerIntent`; `ProducerUiMapping`, `TranscriptLines`, `SpeechTimeline`, `ReplySpeech` (the speech timing of the newest reply),
 `SessionHistory`, `AgentNotices`, `LoaderProgress`. The ViewModel takes the five use cases, `EditPipelineFactory`,
 `TrackLibrary`, `AudioEngine`, `VoiceAgent`, `ConversationHistory`, `ApiLogFeed` and a clock. `di/producerModule`
 binds the ViewModel with named arguments and a wall clock (`kotlin.time.Clock`).
@@ -188,7 +188,10 @@ binds the ViewModel with named arguments and a wall clock (`kotlin.time.Clock`).
   cap until the work is done.
 - Transcript: the view follows a growing reply only when the reader was at the end and has not scrolled since;
   replies that arrive with no session count as heard. While `agentConnected`, a reply shows only its first word until
-  the agent speaks, then reveals at speaking pace. Restored lines get fresh ids that never clash with new lines.
+  the agent speaks. A reply with speech timing (`AgentSpeech`: the `SpeechTimeline` built from the `SpeechChunk`s of
+  its event id) reveals each word when its first character is spoken, keeps revealing through pauses inside the reply
+  and shows in full once its timing has played out and the agent is quiet; the timing ends with the next user turn.
+  A reply without timing reveals at speaking pace and shows in full when the agent stops speaking. Restored lines get fresh ids that never clash with new lines.
 - The mic mute is allowed only while the agent is Listening or Speaking; it is a no-op while Connecting or
   Disconnected.
 - The shader and animations read time and position per frame in the draw phase, without recomposing; the field is
@@ -425,6 +428,9 @@ Manifest components go into the module's `androidMain` manifest; the merged mani
   `agent-conversation`; exhausted credits come back as `ProxyError.QuotaExceeded`.
   `EndAgentSessionUseCase` stops it: the ViewModel calls it when the user toggles the agent off and in `onCleared`;
   both stops run in `AppScope`, which logs a failing stop instead of crashing.
+- `ElevenLabsVoiceAgent` passes the event id of each agent response with `AgentEvent.AgentText` and turns the
+  character alignment of the agent's audio (`onAudioAlignment`) into `AgentEvent.SpeechChunk`s: the characters of a
+  chunk, their start times within it and its duration. The iOS bridge sends no chunks.
 - `ElevenLabsVoiceAgent` serializes start and stop with a `Mutex` and a generation counter (a stop during connect
   ends the session; callbacks from older generations are ignored), derives its state from status and mode
   (`onModeChange`), runs tools on `Dispatchers.Default` and SDK start and stop on `Dispatchers.IO`.

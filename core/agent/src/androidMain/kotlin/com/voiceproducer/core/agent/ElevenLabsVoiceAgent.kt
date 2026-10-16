@@ -122,7 +122,8 @@ class ElevenLabsVoiceAgent(
         onVadScore = { publisher.emit(gen, AgentEvent.VadScore(it)) },
         onTentativeUserTranscriptEvent = { text, _ -> publisher.emit(gen, AgentEvent.TentativeTranscript(text)) },
         onUserTranscriptEvent = { text, _ -> publisher.emit(gen, AgentEvent.UserTranscript(text)) },
-        onAgentResponseEvent = { text, _ -> publisher.emit(gen, AgentEvent.AgentText(text)) },
+        onAgentResponseEvent = { text, eventId -> publisher.emit(gen, AgentEvent.AgentText(text, eventId)) },
+        onAudioAlignment = { audioEvent -> speechChunk(audioEvent)?.let { publisher.emit(gen, it) } },
         onDisconnect = { details ->
             if (details is DisconnectionDetails.Agent) publisher.agentLeft(gen)
             if (generation.get() == gen) session = null

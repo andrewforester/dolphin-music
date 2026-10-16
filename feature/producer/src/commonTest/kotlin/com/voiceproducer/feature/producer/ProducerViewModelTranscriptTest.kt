@@ -78,6 +78,56 @@ class ProducerViewModelTranscriptTest : ProducerViewModelTestBase() {
         }
 
     @Test
+    fun replyCarriesTheTimingOfItsOwnSpeech() =
+        runTest {
+            val vm = viewModel()
+            agent.state.value = AgentState.Speaking
+            runCurrent()
+            val hello = AgentEvent.SpeechChunk(7, "Hello", listOf(0, 80, 160, 240, 320), 400)
+            val there = AgentEvent.SpeechChunk(7, " there", listOf(0, 40, 80, 120, 160, 200), 300)
+            agent.events.emit(hello)
+            agent.events.emit(AgentEvent.AgentText("Hello there", eventId = 7))
+            runCurrent()
+            val replyId =
+                vm.state.value.transcript
+                    .last()
+                    .id
+            assertEquals(AgentSpeech(replyId, SpeechTimeline() + hello), vm.state.value.agentSpeech)
+            agent.events.emit(AgentEvent.SpeechChunk(9, "Other", listOf(0, 1, 2, 3, 4), 50))
+            agent.events.emit(there)
+            runCurrent()
+            assertEquals(AgentSpeech(replyId, SpeechTimeline() + hello + there), vm.state.value.agentSpeech)
+            agent.state.value = AgentState.Disconnected
+            advanceTimeBy(60)
+        }
+
+    @Test
+    fun speechTimingEndsWithTheNextUserTurnOrAReplyWithoutTiming() =
+        runTest {
+            val vm = viewModel()
+            agent.state.value = AgentState.Speaking
+            runCurrent()
+            agent.events.emit(AgentEvent.SpeechChunk(7, "Hi", listOf(0, 80), 160))
+            agent.events.emit(AgentEvent.AgentText("Hi", eventId = 7))
+            runCurrent()
+            assertEquals(
+                vm.state.value.transcript
+                    .last()
+                    .id,
+                vm.state.value.agentSpeech
+                    ?.itemId,
+            )
+            agent.events.emit(AgentEvent.UserTranscript("louder"))
+            runCurrent()
+            assertNull(vm.state.value.agentSpeech)
+            agent.events.emit(AgentEvent.AgentText("Sure."))
+            runCurrent()
+            assertNull(vm.state.value.agentSpeech)
+            agent.state.value = AgentState.Disconnected
+            advanceTimeBy(60)
+        }
+
+    @Test
     fun transcriptRecordsUserAgentAndToolLines() =
         runTest {
             library.put(v1)
