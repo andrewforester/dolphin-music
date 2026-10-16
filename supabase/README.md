@@ -44,14 +44,17 @@ Before minting a token, `agent-token` brings the live agent to the config in `_s
 
 ## Deploy
 
-The app authenticates with an access code, not a Supabase JWT, so deploy with `--no-verify-jwt` (also set in `config.toml`):
+A push to `main` that touches `supabase/` runs `.github/workflows/supabase-deploy.yml`: the proxy tests, then
+`supabase functions deploy` of every function, then a smoke check that `access` answers `401` without a code. It can
+also be started by hand (Actions → Supabase deploy → Run workflow). It needs the repository secret
+`SUPABASE_ACCESS_TOKEN` (a Supabase personal access token) and the variable `SUPABASE_PROJECT_REF`, and runs in the
+`production` environment. Function secrets are not part of the deploy; set them as in "Secrets".
+
+By hand, the app authenticates with an access code, not a Supabase JWT, so deploy with `--no-verify-jwt` (also set in
+`config.toml`):
 
 ```sh
-supabase functions deploy music-plan --no-verify-jwt --project-ref <ref>
-supabase functions deploy music-compose --no-verify-jwt --project-ref <ref>
-supabase functions deploy agent-token --no-verify-jwt --project-ref <ref>
-supabase functions deploy agent-conversation --no-verify-jwt --project-ref <ref>
-supabase functions deploy access --no-verify-jwt --project-ref <ref>
+supabase functions deploy --no-verify-jwt --project-ref <ref>
 ```
 
 Check: `curl -H "x-access-code: <code>" https://<ref>.supabase.co/functions/v1/access` returns `{"access":"code"}`; it calls nothing upstream and spends no credits.
