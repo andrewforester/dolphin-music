@@ -20,6 +20,14 @@ sealed interface AgentEvent {
 
     data class AgentText(
         val text: String,
+        val eventId: Int? = null,
+    ) : AgentEvent
+
+    data class SpeechChunk(
+        val eventId: Int,
+        val text: String,
+        val startsMs: List<Int>,
+        val durationMs: Int,
     ) : AgentEvent
 
     data class Error(
