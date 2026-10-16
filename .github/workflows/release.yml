@@ -3,6 +3,13 @@ name: Release
 on:
   push:
     tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Part of the version to raise
+        type: choice
+        options: [patch, minor, major]
+        default: patch
 
 permissions:
   contents: write
@@ -14,6 +21,9 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          fetch-tags: true
       - name: CI Gradle properties
         run: mkdir -p ~/.gradle && cp .github/ci-gradle.properties ~/.gradle/gradle.properties
       - uses: actions/setup-java@v6
@@ -23,11 +33,20 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
         with:
           cache-read-only: true
-      - name: Version from the tag
+      - name: Version from the tag or the bump
         env:
-          TAG: ${{ github.ref_name }}
+          BUMP: ${{ inputs.bump }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          version="${TAG#v}"
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            version=$(scripts/next-version.sh "$BUMP")
+            if git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
+              echo "::error::Tag v$version already exists"; exit 1
+            fi
+          else
+            version="${REF_NAME#v}"
+          fi
+          echo "TAG=v$version" >> "$GITHUB_ENV"
           IFS=. read -r major minor patch <<< "$version"
           echo "VERSION_NAME=$version" >> "$GITHUB_ENV"
           echo "VERSION_CODE=$((major * 10000 + minor * 100 + patch))" >> "$GITHUB_ENV"
@@ -60,5 +79,9 @@ jobs:
       - name: GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
-        run: gh release create "$TAG" --verify-tag --generate-notes dist/*
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            gh release create "$TAG" --target "$GITHUB_SHA" --generate-notes dist/*
+          else
+            gh release create "$TAG" --verify-tag --generate-notes dist/*
+          fi
