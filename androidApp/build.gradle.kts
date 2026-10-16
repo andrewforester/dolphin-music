@@ -34,7 +34,6 @@ android {
 
     defaultConfig {
         applicationId = "com.voiceproducer.android"
-        providers.gradleProperty("applicationIdSuffix").orNull?.let { applicationIdSuffix = it }
         versionCode = providers.gradleProperty("versionCode").map(String::toInt).getOrElse(1)
         versionName = providers.gradleProperty("versionName").getOrElse("0.1.0")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

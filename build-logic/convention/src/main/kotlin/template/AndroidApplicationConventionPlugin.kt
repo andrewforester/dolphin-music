@@ -29,6 +29,7 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
                         ?.let { ndk { abiFilters += it } }
                 }
                 buildFeatures { compose = true }
+                buildTypes.getByName("debug") { applicationIdSuffix = ".debug" }
                 compileOptions {
                     sourceCompatibility = JavaVersion.VERSION_17
                     targetCompatibility = JavaVersion.VERSION_17
