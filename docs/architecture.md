@@ -237,9 +237,11 @@ initialAccessCode = BuildConfig.ACCESS_CODE), AgentConfig(demo = BuildConfig.DEB
 `MainActivity` calls `installSplashScreen()` (theme `Theme.VoiceProducer.Starting`: the orb on `splash_background`, then `Theme.VoiceProducer`; the launcher icon `ic_launcher` is the orb on the background gradient, `ic_launcher_round` the orb alone), sets edge-to-edge and `setContent { App(...) }`, passing an intent interceptor (a `ToggleAgent`
 without `RECORD_AUDIO` launches the permission request; a grant reports `MicPermission(true)` and starts the agent),
 a local-time formatter and the activity `BackHandler`; it re-checks the permission on every resume. Its
-`koinViewModel()` and the screen's resolve the same activity-scoped ViewModel. Manifest, resources, release signing,
+`koinViewModel()` and the screen's resolve the same activity-scoped ViewModel. The debug build is
+`com.voiceproducer.android.debug` (`applicationIdSuffix` from `template.android.application`) labelled "Dolphin Dev"
+(`src/debug/res`), so it installs next to the release build "Dolphin". Manifest, resources, release signing,
 version from the `versionName` / `versionCode` Gradle properties. Unit tests over the whole app: `KoinGraphTest`
-(Robolectric; starts the graph with `initKoin` and `androidContext`, resolves the ViewModel, every port, `AppDatabase`, `AppScope` and every use case) and `PreviewScreenshotTest` (see "Testing"). Holds the module-graph rules
+(Robolectric; starts the graph with `initKoin` and `androidContext`, resolves the ViewModel, every port, `AppDatabase`, `AppScope` and every use case) `DebugBuildIdentityTest` (debug application id and label) and `PreviewScreenshotTest` (see "Testing"). Holds the module-graph rules
 (`moduleGraphAssert`). Depends on `composeApp`, `feature/producer`, `core/domain` and `core/model`.
 
 ### `konsist-test`
