@@ -23,6 +23,11 @@ sealed interface AgentEvent {
         val eventId: Int? = null,
     ) : AgentEvent
 
+    data class AgentTextCorrected(
+        val text: String,
+        val eventId: Int? = null,
+    ) : AgentEvent
+
     data class SpeechChunk(
         val eventId: Int,
         val text: String,

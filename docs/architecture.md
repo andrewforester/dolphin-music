@@ -431,6 +431,10 @@ Manifest components go into the module's `androidMain` manifest; the merged mani
 - `ElevenLabsVoiceAgent` passes the event id of each agent response with `AgentEvent.AgentText` and turns the
   character alignment of the agent's audio (`onAudioAlignment`) into `AgentEvent.SpeechChunk`s: the characters of a
   chunk, their start times within it and its duration. The iOS bridge sends no chunks.
+- When the user interrupts, the server sends the part of the reply that was spoken: `onAgentResponseCorrectionEvent`
+  (Android) and `onAgentResponseCorrection` (iOS, through `AgentBridgeListener.onAgentTextCorrected`) become
+  `AgentEvent.AgentTextCorrected`, and `TranscriptLog.correctLastReply` rewrites the newest reply in place (and in the
+  stored history) unless a user line followed it.
 - `ElevenLabsVoiceAgent` serializes start and stop with a `Mutex` and a generation counter (a stop during connect
   ends the session; callbacks from older generations are ignored), derives its state from status and mode
   (`onModeChange`), runs tools on `Dispatchers.Default` and SDK start and stop on `Dispatchers.IO`.

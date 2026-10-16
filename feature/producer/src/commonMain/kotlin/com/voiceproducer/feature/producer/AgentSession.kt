@@ -174,6 +174,12 @@ internal class AgentSession(
                 state.update { it.copy(liveUserText = event.text) }
             }
 
+            is AgentEvent.AgentTextCorrected -> {
+                if (transcript.correctLastReply(event.text)) {
+                    state.update { it.copy(agent = it.agent.copy(lastAgentText = event.text)) }
+                }
+            }
+
             is AgentEvent.SpeechChunk -> {
                 replySpeech.onChunk(event)
             }

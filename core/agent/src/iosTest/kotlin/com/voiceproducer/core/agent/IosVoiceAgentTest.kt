@@ -277,12 +277,14 @@ class IosVoiceAgentTest {
             bridge.listener.onVad(0.7f)
             bridge.listener.onUserTranscript("you")
             bridge.listener.onAgentText("me")
+            bridge.listener.onAgentTextCorrected("m")
             bridge.listener.onError("bad")
             assertEquals(
                 listOf(
                     AgentEvent.VadScore(0.7f),
                     AgentEvent.UserTranscript("you"),
                     AgentEvent.AgentText("me"),
+                    AgentEvent.AgentTextCorrected("m"),
                     AgentEvent.Error("bad"),
                 ),
                 events,

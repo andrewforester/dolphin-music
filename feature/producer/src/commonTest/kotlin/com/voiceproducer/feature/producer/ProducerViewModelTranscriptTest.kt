@@ -128,6 +128,41 @@ class ProducerViewModelTranscriptTest : ProducerViewModelTestBase() {
         }
 
     @Test
+    fun anInterruptedReplyKeepsOnlyWhatWasSaid() =
+        runTest {
+            library.put(v1)
+            val vm = viewModel()
+            advanceUntilIdle()
+            agent.events.emit(AgentEvent.UserTranscript("make the chorus heavier"))
+            agent.events.emit(AgentEvent.AgentText("Reworking the chorus now with heavier drums and a darker bass.", eventId = 3))
+            runCurrent()
+            val replyId =
+                vm.state.value.transcript
+                    .last()
+                    .id
+            agent.events.emit(AgentEvent.AgentTextCorrected("Reworking the chorus now", eventId = 3))
+            advanceUntilIdle()
+            assertEquals(
+                TranscriptItem.Agent(replyId, "Reworking the chorus now"),
+                vm.state.value.transcript
+                    .last(),
+            )
+            assertEquals("Reworking the chorus now", vm.state.value.agent.lastAgentText)
+            assertEquals(listOf(user("make the chorus heavier"), reply("Reworking the chorus now")), history.of(7))
+        }
+
+    @Test
+    fun aCorrectionWithoutAReplyChangesNothing() =
+        runTest {
+            val vm = viewModel()
+            advanceUntilIdle()
+            agent.events.emit(AgentEvent.UserTranscript("hello"))
+            agent.events.emit(AgentEvent.AgentTextCorrected("Hi", eventId = 1))
+            advanceUntilIdle()
+            assertEquals(listOf<TranscriptItem>(TranscriptItem.User(0, "hello")), vm.lines())
+        }
+
+    @Test
     fun transcriptRecordsUserAgentAndToolLines() =
         runTest {
             library.put(v1)

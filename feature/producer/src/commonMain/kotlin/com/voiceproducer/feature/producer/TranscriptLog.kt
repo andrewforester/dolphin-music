@@ -131,6 +131,15 @@ internal class TranscriptLog(
         landed: Boolean,
     ) = updateTool(id) { it.copy(status = if (landed) ToolStatus.Done else ToolStatus.Failed) }
 
+    fun correctLastReply(text: String): Boolean {
+        val reply = state.value.transcript.lastOrNull { it is TranscriptItem.Agent || it is TranscriptItem.User }
+        if (reply !is TranscriptItem.Agent) return false
+        val corrected = reply.copy(text = text)
+        state.update { s -> s.copy(transcript = s.transcript.map { if (it.id == reply.id) corrected else it }) }
+        store(corrected)
+        return true
+    }
+
     fun store(item: TranscriptItem) {
         if (!storing) return
         val message = storedMessage(item)

@@ -32,6 +32,7 @@ class DuckController {
 
                 is AgentEvent.UserTranscript,
                 is AgentEvent.AgentText,
+                is AgentEvent.AgentTextCorrected,
                 is AgentEvent.SpeechChunk,
                 is AgentEvent.Error,
                 AgentEvent.Refused,
