@@ -583,7 +583,9 @@ Manifest components go into the module's `androidMain` manifest; the merged mani
   `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD` (environment) are all set; without
   them the release APK stays unsigned. The keystore and its passwords are never committed.
 - **Release version.** `androidApp` takes `versionName` and `versionCode` from the Gradle properties of the same
-  name (defaults `0.1.0` and `1`); `release.yml` derives them from the tag (`major * 10000 + minor * 100 + patch`).
+  name; `release.yml` derives them from the tag (`major * 10000 + minor * 100 + patch`). Without the properties
+  the name is `git describe --tags` without the `v` (`0.1.0-5-gd53ae6d`) and the code is that of the tag it starts
+  from; without git or a tag they are `0.1.0` and `1`.
 - **Version bump.** A manual `release.yml` run takes `bump` (`patch`, `minor`, `major`); `scripts/next-version.sh`
   raises the latest tag (for `patch` the latest tag reachable from the run's branch, otherwise the highest tag), and
   the release creates the new tag on the built commit. A run whose tag already exists fails.
