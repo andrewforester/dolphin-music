@@ -123,6 +123,7 @@ class ElevenLabsVoiceAgent(
         onTentativeUserTranscriptEvent = { text, _ -> publisher.emit(gen, AgentEvent.TentativeTranscript(text)) },
         onUserTranscriptEvent = { text, _ -> publisher.emit(gen, AgentEvent.UserTranscript(text)) },
         onAgentResponseEvent = { text, eventId -> publisher.emit(gen, AgentEvent.AgentText(text, eventId)) },
+        onAgentResponseCorrectionEvent = { text, eventId -> publisher.emit(gen, AgentEvent.AgentTextCorrected(text, eventId)) },
         onAudioAlignment = { audioEvent -> speechChunk(audioEvent)?.let { publisher.emit(gen, it) } },
         onDisconnect = { details ->
             if (details is DisconnectionDetails.Agent) publisher.agentLeft(gen)

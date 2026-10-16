@@ -163,6 +163,8 @@ class IosVoiceAgent(
 
         override fun onAgentText(text: String) = emit(gen, AgentEvent.AgentText(text))
 
+        override fun onAgentTextCorrected(text: String) = emit(gen, AgentEvent.AgentTextCorrected(text))
+
         override fun onError(message: String) = endStart(AgentEvent.Error(message))
 
         override fun onRefused() = endStart(AgentEvent.Refused)

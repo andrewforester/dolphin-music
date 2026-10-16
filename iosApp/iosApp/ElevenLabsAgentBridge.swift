@@ -96,6 +96,9 @@ final class ElevenLabsAgentBridge: NSObject, AgentBridge {
                     self?.deliver(to: current) { $0.onAgentText(text: text) }
                 }
             },
+            onAgentResponseCorrection: { [weak self, weak current] _, corrected, _ in
+                Self.onMain { self?.deliver(to: current) { $0.onAgentTextCorrected(text: corrected) } }
+            },
             onUserTranscript: { [weak self, weak current] text, _ in
                 Self.onMain { self?.deliver(to: current) { $0.onUserTranscript(text: text) } }
             },

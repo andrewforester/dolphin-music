@@ -13,6 +13,8 @@ interface AgentBridgeListener {
 
     fun onAgentText(text: String)
 
+    fun onAgentTextCorrected(text: String)
+
     fun onError(message: String)
 
     fun onRefused()
