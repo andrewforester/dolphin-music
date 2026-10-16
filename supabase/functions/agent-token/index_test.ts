@@ -4,10 +4,10 @@ import { handler } from "./handler.ts";
 const env: Record<string, string> = {
   ELEVENLABS_API_KEY: "music-key",
   ELEVENLABS_AGENTS_KEY: "agents-key",
-  APP_SHARED_SECRET: "s3cret",
+  ACCESS_CODES: "test:s3cret",
   AGENT_ID: "agent_123",
 };
-const goodRequest = () => new Request("http://x", { headers: { "x-app-secret": "s3cret" } });
+const goodRequest = () => new Request("http://x", { headers: { "x-access-code": "s3cret" } });
 
 Deno.test("agentTokenCallsConvaiEndpoint", async () => {
   let url = "";
@@ -25,7 +25,7 @@ Deno.test("agentTokenCallsConvaiEndpoint", async () => {
 
 Deno.test("agent-token rejects bad secret", async () => {
   const deps = { fetch: (() => Promise.reject(new Error("no"))) as typeof globalThis.fetch, env: (k: string) => env[k] };
-  assertEquals((await handler(new Request("http://x", { headers: { "x-app-secret": "bad" } }), deps)).status, 401);
+  assertEquals((await handler(new Request("http://x", { headers: { "x-access-code": "bad" } }), deps)).status, 401);
 });
 
 Deno.test("agent-token returns 500 without calling upstream when ELEVENLABS_AGENTS_KEY is unset", async () => {

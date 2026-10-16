@@ -3,12 +3,12 @@ import { handler } from "./handler.ts";
 
 const env: Record<string, string> = {
   ELEVENLABS_AGENTS_KEY: "agents-key",
-  APP_SHARED_SECRET: "s3cret",
+  ACCESS_CODES: "test:s3cret",
   AGENT_ID: "agent_123",
 };
 const request = (id: string | null, secret = "s3cret") =>
   new Request(`http://x/agent-conversation${id === null ? "" : `?id=${encodeURIComponent(id)}`}`, {
-    headers: { "x-app-secret": secret },
+    headers: { "x-access-code": secret },
   });
 
 const quotaRefused = {

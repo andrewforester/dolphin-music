@@ -1,4 +1,4 @@
-import { matchAccessCode, secretMatches } from "./auth.ts";
+import { matchAccessCode } from "./auth.ts";
 
 export const API_BASE = "https://api.elevenlabs.io";
 export const MODEL_ID = "music_v2_5";
@@ -22,19 +22,17 @@ export function errorResponse(status: number, error: string): Response {
   return jsonResponse({ error, status }, status);
 }
 
-export type Access = { kind: "code"; label: string } | { kind: "app" };
+export type Access = { kind: "code"; label: string };
 
 export function resolveAccess(req: Request, deps: Deps): Access | null {
   const label = matchAccessCode(req.headers.get("x-access-code"), deps.env("ACCESS_CODES"));
-  if (label !== null) return { kind: "code", label };
-  if (secretMatches(req.headers.get("x-app-secret"), deps.env("APP_SHARED_SECRET"))) return { kind: "app" };
-  return null;
+  return label === null ? null : { kind: "code", label };
 }
 
 export function unauthorized(req: Request, deps: Deps): Response | null {
   const access = resolveAccess(req, deps);
   if (access === null) return errorResponse(401, "unauthorized");
-  if (access.kind === "code") console.log(JSON.stringify({ evt: "access", code: access.label }));
+  console.log(JSON.stringify({ evt: "access", code: access.label }));
   return null;
 }
 

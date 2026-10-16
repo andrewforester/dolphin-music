@@ -7,10 +7,10 @@ Edge Functions that keep the ElevenLabs API key off the device. The app sends an
 | `music-plan` | `POST {prompt, music_length_ms}` | plan JSON (`{chunks: [...]}`) |
 | `music-compose` | `POST {composition_plan}` | binary audio; headers `song-id`, `x-audio-format`, `x-audio-channels` |
 | `agent-token` | `GET` | `{"token": "..."}` (after the agent sync, below) |
-| `access` | `GET` | `{"access": "code" \| "app"}`: the code or secret is valid; nothing is called upstream |
+| `access` | `GET` | `{"access": "code"}`: the code is valid; nothing is called upstream |
 | `agent-conversation` | `GET ?id=conv_...` | why the agent's conversation failed: `{"status": "...", "reason": "..." \| null}`, or `402 {"error": "quota_exceeded"}` for exhausted credits |
 
-All require a known `x-access-code` (or the legacy `x-app-secret`), otherwise `401`. Upstream errors come back as `{error, status}` with the same HTTP status (429 included).
+All require a known `x-access-code`, otherwise `401`. Upstream errors come back as `{error, status}` with the same HTTP status (429 included).
 
 ## Secrets
 
@@ -31,7 +31,6 @@ supabase secrets set --project-ref <ref> \
   logs `{"evt":"access","code":"<label>"}`. Removing a pair (`supabase secrets set ACCESS_CODES=...`) revokes that code.
 
 `PREFERRED_FORMATS` and `PCM_CHANNELS` are optional (the values above are the defaults).
-- `APP_SHARED_SECRET` (optional, legacy): also accepted as `x-app-secret`, for builds from before access codes.
 - `AGENT_SYNC=off` (optional): skips the agent sync below.
 
 ## Agent sync
