@@ -42,14 +42,9 @@ Deno.test("unauthorized lets an access code through", () => {
   );
 });
 
-Deno.test("unauthorized still accepts the app secret", () => {
-  assertEquals(
-    unauthorized(
-      req({ "x-app-secret": "s3cret" }),
-      deps({ APP_SHARED_SECRET: "s3cret", ACCESS_CODES: CODES }),
-    ),
-    null,
-  );
+Deno.test("unauthorized no longer accepts the app secret", () => {
+  const res = unauthorized(req({ "x-app-secret": "s3cret" }), deps({ APP_SHARED_SECRET: "s3cret", ACCESS_CODES: CODES }));
+  assertEquals(res?.status, 401);
 });
 
 Deno.test("unauthorized answers 401 for a wrong code, a code sent as the app secret, or nothing", async () => {
@@ -73,8 +68,6 @@ Deno.test("resolveAccess names how the request got in", () => {
     resolveAccess(req({ "x-access-code": "river-copper-violin-dawn" }), d),
     { kind: "code", label: "elevenlabs" },
   );
-  assertEquals(resolveAccess(req({ "x-app-secret": "s3cret" }), d), {
-    kind: "app",
-  });
+  assertEquals(resolveAccess(req({ "x-app-secret": "s3cret" }), d), null);
   assertEquals(resolveAccess(req({}), d), null);
 });

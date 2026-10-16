@@ -1,7 +1,7 @@
 import { assertEquals } from "jsr:@std/assert@1";
 import { handler } from "./handler.ts";
 
-const env: Record<string, string> = { ELEVENLABS_API_KEY: "key", APP_SHARED_SECRET: "s3cret" };
+const env: Record<string, string> = { ELEVENLABS_API_KEY: "key", ACCESS_CODES: "test:s3cret" };
 
 Deno.test("music-plan forwards prompt, length and model", async () => {
   let seen: { url: string; init: RequestInit } | undefined;
@@ -10,7 +10,7 @@ Deno.test("music-plan forwards prompt, length and model", async () => {
     return Promise.resolve(new Response('{"chunks":[]}', { status: 200, headers: { "content-type": "application/json" } }));
   };
   const res = await handler(
-    new Request("http://x", { method: "POST", headers: { "x-app-secret": "s3cret" }, body: '{"prompt":"p","music_length_ms":10000}' }),
+    new Request("http://x", { method: "POST", headers: { "x-access-code": "s3cret" }, body: '{"prompt":"p","music_length_ms":10000}' }),
     { fetch: fetch as typeof globalThis.fetch, env: (k) => env[k] },
   );
   assertEquals(res.status, 200);
@@ -23,7 +23,7 @@ Deno.test("music-plan requires secret and propagates errors", async () => {
   const deps = { fetch: (() => Promise.resolve(new Response("nope", { status: 429 }))) as typeof globalThis.fetch, env: (k: string) => env[k] };
   assertEquals((await handler(new Request("http://x", { method: "POST", body: "{}" }), deps)).status, 401);
   const res = await handler(
-    new Request("http://x", { method: "POST", headers: { "x-app-secret": "s3cret" }, body: '{"prompt":"p","music_length_ms":1}' }),
+    new Request("http://x", { method: "POST", headers: { "x-access-code": "s3cret" }, body: '{"prompt":"p","music_length_ms":1}' }),
     deps,
   );
   assertEquals(res.status, 429);
@@ -31,7 +31,7 @@ Deno.test("music-plan requires secret and propagates errors", async () => {
 });
 
 const planReq = () =>
-  new Request("http://x", { method: "POST", headers: { "x-app-secret": "s3cret" }, body: '{"prompt":"p","music_length_ms":1}' });
+  new Request("http://x", { method: "POST", headers: { "x-access-code": "s3cret" }, body: '{"prompt":"p","music_length_ms":1}' });
 
 Deno.test("music-plan returns 502 when the upstream fetch throws", async () => {
   const deps = { fetch: (() => Promise.reject(new TypeError("dns failure"))) as typeof globalThis.fetch, env: (k: string) => env[k] };

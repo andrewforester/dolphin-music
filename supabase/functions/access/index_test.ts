@@ -1,7 +1,7 @@
 import { assertEquals } from "jsr:@std/assert@1";
 import { handler } from "./handler.ts";
 
-const env: Record<string, string> = { ACCESS_CODES: "elevenlabs:river-copper-violin-dawn", APP_SHARED_SECRET: "s3cret" };
+const env: Record<string, string> = { ACCESS_CODES: "elevenlabs:river-copper-violin-dawn" };
 let upstreamCalls = 0;
 const deps = {
   fetch: (() => {

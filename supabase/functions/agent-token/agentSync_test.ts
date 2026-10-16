@@ -5,7 +5,7 @@ import { handler } from "./handler.ts";
 const KEY = "sk-agents-secret-456";
 const env: Record<string, string> = {
   ELEVENLABS_AGENTS_KEY: KEY,
-  APP_SHARED_SECRET: "s3cret",
+  ACCESS_CODES: "test:s3cret",
   AGENT_ID: "agent_123",
 };
 
@@ -241,7 +241,7 @@ Deno.test("sync keeps foreign tools attached", async () => {
 Deno.test("sync failure logs failed with the status, never the key, and the token still works", async () => {
   const api = fakeApi({ failWith: 403 });
   const { deps, logs } = setup(api);
-  const res = await handler(new Request("http://x", { headers: { "x-app-secret": "s3cret" } }), deps);
+  const res = await handler(new Request("http://x", { headers: { "x-access-code": "s3cret" } }), deps);
   assertEquals(await res.json(), { token: "tok" });
   assertEquals(logs.length, 1);
   assertEquals(logs[0].outcome, "failed");
@@ -261,7 +261,7 @@ Deno.test("failure is not memoized: the next request retries", async () => {
 Deno.test("success is memoized: the second request does not read the agent again", async () => {
   const api = fakeApi();
   const { deps, logs } = setup(api);
-  const req = () => new Request("http://x", { headers: { "x-app-secret": "s3cret" } });
+  const req = () => new Request("http://x", { headers: { "x-access-code": "s3cret" } });
   await handler(req(), deps);
   await handler(req(), deps);
   assertEquals(api.agentGets(), 1);
@@ -278,7 +278,7 @@ Deno.test("concurrent requests share one sync", async () => {
 Deno.test("AGENT_SYNC=off skips the sync and still returns the token", async () => {
   const api = fakeApi();
   const { deps, logs } = setup(api, { AGENT_SYNC: "off" });
-  const res = await handler(new Request("http://x", { headers: { "x-app-secret": "s3cret" } }), deps);
+  const res = await handler(new Request("http://x", { headers: { "x-access-code": "s3cret" } }), deps);
   assertEquals(await res.json(), { token: "tok" });
   assertEquals(api.calls.map((c) => c.path), ["/v1/convai/conversation/token?agent_id=agent_123"]);
   assertEquals(logs, []);

@@ -4,7 +4,7 @@ import { resetFormatCache } from "../_shared/elevenlabs.ts";
 
 const env = {
   ELEVENLABS_API_KEY: "key",
-  APP_SHARED_SECRET: "s3cret",
+  ACCESS_CODES: "test:s3cret",
   PREFERRED_FORMATS: "pcm_44100,pcm_24000",
   PCM_CHANNELS: "2",
 };
@@ -21,7 +21,7 @@ function setup(responses: Response[]) {
 function req(secret: string | null = "s3cret") {
   return new Request("http://x/music-compose", {
     method: "POST",
-    headers: secret ? { "x-app-secret": secret } : {},
+    headers: secret ? { "x-access-code": secret } : {},
     body: JSON.stringify({ composition_plan: { chunks: [] } }),
   });
 }
@@ -109,7 +109,7 @@ Deno.test("composePropagates429", async () => {
 Deno.test("compose rejects missing composition_plan with 400", async () => {
   resetFormatCache();
   const { deps } = setup([]);
-  const r = new Request("http://x", { method: "POST", headers: { "x-app-secret": "s3cret" }, body: "{}" });
+  const r = new Request("http://x", { method: "POST", headers: { "x-access-code": "s3cret" }, body: "{}" });
   assertEquals((await handler(r, deps)).status, 400);
 });
 
