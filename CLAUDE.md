@@ -49,8 +49,8 @@ Android and iOS app (Kotlin Multiplatform) for composing music with an AI voice 
 
 ## Proxy and agent
 
-- Change the voice agent in `supabase/functions/_shared/agent/` (`prompt.ts`, `agent.ts`, `tools.ts`), then deploy
-  `agent-token`; it syncs the definition to the live agent on the next token request.
+- Change the voice agent in `supabase/functions/_shared/agent/` (`prompt.ts`, `agent.ts`, `tools.ts`); merging to
+  `main` deploys the functions, and `agent-token` syncs the definition to the live agent on the next token request.
 - Never commit or print secret values (`local.properties`, `.env`, `iosApp/Secrets.xcconfig`).
 - Never generate music without the user asking for it.
 
@@ -73,5 +73,5 @@ python3 scripts/contact_sheet.py /tmp/sheet.png   # one image of all goldens
 (cd iosApp && xcodegen generate)                  # then open iosApp/iosApp.xcodeproj; see iosApp/README.md
 ./gradlew :konsist-test:test :androidApp:assertModuleGraph  # architecture rules
 deno test supabase/functions                      # proxy tests
-supabase functions deploy <name> --no-verify-jwt  # deploy a proxy function
+supabase functions deploy --no-verify-jwt        # deploy the proxy by hand; merging to main deploys it
 ```

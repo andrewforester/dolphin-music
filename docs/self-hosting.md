@@ -68,10 +68,12 @@ To revoke a code, set `ACCESS_CODES` again without it.
 ## 5. Deploy
 
 ```sh
-for f in access music-plan music-compose agent-token agent-conversation; do
-  supabase functions deploy "$f" --no-verify-jwt --project-ref <ref>
-done
+supabase functions deploy --no-verify-jwt --project-ref <ref>
 ```
+
+To deploy on every push to `main` instead, add the repository secret `SUPABASE_ACCESS_TOKEN` (a Supabase personal
+access token) and the variable `SUPABASE_PROJECT_REF`; `.github/workflows/supabase-deploy.yml` then deploys every
+function when `supabase/` changes.
 
 ## 6. Check
 

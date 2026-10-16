@@ -557,6 +557,7 @@ Manifest components go into the module's `androidMain` manifest; the merged mani
 |---|---|---|
 | Every push to a PR, the merge queue, `main` | `ci.yml` | `Changes` → `Gates` (Ubuntu, `./gradlew verify`), `iOS` (macOS, simulator tests and app build) and `Supabase` (`deno test supabase/functions`) → `CI status` |
 | Weekday nights, by hand | `nightly.yml` | R8 release APK and bundle, release lint, iOS release build |
+| Push to `main` touching `supabase/`, by hand | `supabase-deploy.yml` | Proxy tests, `supabase functions deploy` of every function, smoke check that `access` answers `401` without a code |
 | Tag `v*.*.*` | `release.yml` | Signed R8 release APK for `arm64-v8a`, version from the tag, GitHub release with the APK |
 
 - **Path filters.** On a PR, `Gates` is skipped when only Markdown, `docs/`, `supabase/` or `agent/` changed;
@@ -574,7 +575,9 @@ Manifest components go into the module's `androidMain` manifest; the merged mani
   access code; the iOS jobs write `iosApp/Secrets.xcconfig` with an empty URL. Only `release.yml` uses more secrets:
   `ANDROID_KEYSTORE_BASE64` (decoded to `$RUNNER_TEMP/release.jks`), `ANDROID_KEYSTORE_PASSWORD`,
   `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD`. The nightly artifacts are unsigned, carry no access code, and expire
-  after 7 days.
+  after 7 days. `supabase-deploy.yml` runs in the `production` environment with the secret `SUPABASE_ACCESS_TOKEN`
+  and the variable `SUPABASE_PROJECT_REF`; without the variable, as in a fork, the deploy job is skipped. Function
+  secrets are set with `supabase secrets set`, not by the workflow.
 - **Release signing.** `androidApp` signs the `release` build type when `signing.storeFile`, `signing.storePassword`,
   `signing.keyAlias` and `signing.keyPassword` (from `local.properties`) or `ANDROID_KEYSTORE_PATH`,
   `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD` (environment) are all set; without
