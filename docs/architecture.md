@@ -562,7 +562,7 @@ Manifest components go into the module's `androidMain` manifest; the merged mani
 | Every push to a PR, the merge queue, `main` | `ci.yml` | `Changes` → `Gates` (Ubuntu, `./gradlew verify`), `iOS` (macOS, simulator tests and app build) and `Supabase` (`deno test supabase/functions`) → `CI status` |
 | Weekday nights, by hand | `nightly.yml` | R8 release APK and bundle, release lint, iOS release build |
 | Push to `main` touching `supabase/`, by hand | `supabase-deploy.yml` | Proxy tests, `supabase functions deploy` of every function, smoke check that `access` answers `401` without a code |
-| Tag `v*.*.*` | `release.yml` | Signed R8 release APK for `arm64-v8a`, version from the tag, GitHub release with the APK |
+| Tag `v*.*.*`, by hand | `release.yml` | Signed R8 release APK for `arm64-v8a`, version from the tag or raised by hand, GitHub release with the APK |
 
 - **Path filters.** On a PR, `Gates` is skipped when only Markdown, `docs/`, `supabase/` or `agent/` changed;
   `iOS` runs only when `core/`, `feature/`, `composeApp/`, `iosApp/`, the build or `ci.yml` changed; `Supabase`
@@ -587,7 +587,12 @@ Manifest components go into the module's `androidMain` manifest; the merged mani
   `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD` (environment) are all set; without
   them the release APK stays unsigned. The keystore and its passwords are never committed.
 - **Release version.** `androidApp` takes `versionName` and `versionCode` from the Gradle properties of the same
-  name (defaults `0.1.0` and `1`); `release.yml` derives them from the tag (`major * 10000 + minor * 100 + patch`).
+  name; `release.yml` derives them from the tag (`major * 10000 + minor * 100 + patch`). Without the properties
+  the name is `git describe --tags` without the `v` (`0.1.0-5-gd53ae6d`) and the code is that of the tag it starts
+  from; without git or a tag they are `0.1.0` and `1`.
+- **Version bump.** A manual `release.yml` run takes `bump` (`patch`, `minor`, `major`); `scripts/next-version.sh`
+  raises the latest tag (for `patch` the latest tag reachable from the run's branch, otherwise the highest tag), and
+  the release creates the new tag on the built commit. A run whose tag already exists fails.
 - **Release assets.** A tag release carries `dolphin-<version>-arm64.apk`, checked with `apksigner verify`. It holds
   no secret: the person enters an access code on first start.
 - **ABI filter.** The `abiFilters` Gradle property (comma-separated, read by `template.android.application`) limits

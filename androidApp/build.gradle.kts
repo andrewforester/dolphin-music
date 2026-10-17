@@ -24,6 +24,20 @@ fun signingValue(
     env: String,
 ): String? = (localProps.getProperty(property) ?: System.getenv(env))?.takeIf { it.isNotBlank() }
 
+val gitVersion =
+    providers
+        .exec {
+            commandLine("git", "describe", "--tags", "--match", "v[0-9]*.[0-9]*.[0-9]*")
+            isIgnoreExitValue = true
+        }.standardOutput.asText
+        .map { it.trim().removePrefix("v") }
+        .filter { it.isNotEmpty() }
+
+fun versionCodeOf(version: String): Int {
+    val (major, minor, patch) = version.substringBefore('-').split('.').map(String::toInt)
+    return major * 10000 + minor * 100 + patch
+}
+
 val signingStoreFile = signingValue("signing.storeFile", "ANDROID_KEYSTORE_PATH")
 val signingStorePassword = signingValue("signing.storePassword", "ANDROID_KEYSTORE_PASSWORD")
 val signingKeyAlias = signingValue("signing.keyAlias", "ANDROID_KEY_ALIAS")
@@ -34,8 +48,13 @@ android {
 
     defaultConfig {
         applicationId = "com.voiceproducer.android"
-        versionCode = providers.gradleProperty("versionCode").map(String::toInt).getOrElse(1)
-        versionName = providers.gradleProperty("versionName").getOrElse("0.1.0")
+        versionCode =
+            providers
+                .gradleProperty("versionCode")
+                .map(String::toInt)
+                .orElse(gitVersion.map(::versionCodeOf))
+                .getOrElse(1)
+        versionName = providers.gradleProperty("versionName").orElse(gitVersion).getOrElse("0.1.0")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField(
             "String",
