@@ -32,7 +32,7 @@ jobs:
           deno-version: v2.x
       - name: Proxy tests
         run: deno test supabase/functions
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v3
         with:
           version: latest
       - name: Deploy every function
