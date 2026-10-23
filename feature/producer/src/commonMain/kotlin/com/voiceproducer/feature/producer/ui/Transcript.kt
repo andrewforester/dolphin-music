@@ -1,5 +1,11 @@
 package com.voiceproducer.feature.producer.ui
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.scrollBy
@@ -7,12 +13,15 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,10 +38,12 @@ import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -50,6 +61,8 @@ import com.voiceproducer.feature.producer.toolLineText
 import com.voiceproducer.feature.producer.toolStatusMark
 import com.voiceproducer.feature.producer.wordCount
 import kotlinx.collections.immutable.ImmutableList
+import kotlin.math.PI
+import kotlin.math.sin
 
 private val CardShape = RoundedCornerShape(22.dp)
 private val BubbleShape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp, bottomEnd = 5.dp, bottomStart = 18.dp)
@@ -64,6 +77,7 @@ internal fun TranscriptCard(
     agentConnected: Boolean = false,
     agentSpeaking: Boolean = false,
     speech: AgentSpeech? = null,
+    bottomInset: Dp = 0.dp,
 ) {
     val list = rememberLazyListState()
     val newestAgentId = items.lastOrNull { it is TranscriptItem.Agent }?.id
@@ -74,7 +88,7 @@ internal fun TranscriptCard(
     LazyColumn(
         state = list,
         modifier = modifier.fillMaxWidth().glass(CardShape).testTag("transcript"),
-        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
+        contentPadding = PaddingValues(start = 14.dp, top = 12.dp, end = 14.dp, bottom = 12.dp + bottomInset),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         if (count == 0) {
@@ -105,7 +119,7 @@ internal fun TranscriptCard(
             }
         }
         if (liveUserText != null) {
-            item(key = "live") { UserLine(liveUserText, live = true) }
+            item(key = "live") { if (liveUserText.isEmpty()) PendingUserLine() else UserLine(liveUserText, live = true) }
         }
     }
 }
@@ -192,6 +206,45 @@ private fun UserLine(
         }
     }
 }
+
+@Composable
+private fun PendingUserLine() {
+    val phase by rememberInfiniteTransition().animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(DOTS_PERIOD_MS, easing = LinearEasing), RepeatMode.Restart),
+    )
+    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+        Row(
+            Modifier
+                .background(Palette.Bubble, BubbleShape)
+                .padding(horizontal = 16.dp, vertical = 17.dp)
+                .testTag("transcript-pending"),
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+        ) {
+            repeat(DOTS) { i ->
+                val wave = (sin(2 * PI * (phase - i / DOTS.toFloat())).toFloat() + 1f) / 2f
+                Box(
+                    Modifier
+                        .size(7.dp)
+                        .graphicsLayer {
+                            alpha = DOT_DIM + (1f - DOT_DIM) * wave
+                            scaleX = DOT_SMALL + (1f - DOT_SMALL) * wave
+                            scaleY = scaleX
+                        }.background(Palette.Ink, CircleShape),
+                )
+            }
+        }
+    }
+}
+
+private const val DOTS = 3
+
+private const val DOTS_PERIOD_MS = 1_100
+
+private const val DOT_DIM = 0.25f
+
+private const val DOT_SMALL = 0.75f
 
 @Composable
 private fun AgentLine(

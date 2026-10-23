@@ -39,6 +39,7 @@ internal fun PillRows(
     modifier: Modifier = Modifier,
     gap: Dp = 5.dp,
     contentPadding: Dp = 0.dp,
+    minLines: Int = 1,
     content: @Composable () -> Unit,
 ) {
     BoxWithConstraints(modifier.fillMaxWidth()) {
@@ -54,7 +55,9 @@ internal fun PillRows(
             val contentWidth = maxOf(viewport, lines.maxOfOrNull(::lineWidth) ?: 0)
             val scrolls = contentWidth > viewport
             val heights = lines.map { line -> line.maxOf { it.height } }
-            val height = heights.sum() + gapPx * (lines.size - 1).coerceAtLeast(0)
+            val lineHeight = heights.firstOrNull() ?: 0
+            val shownLines = maxOf(lines.size, minLines)
+            val height = heights.sum() + lineHeight * (shownLines - lines.size) + gapPx * (shownLines - 1).coerceAtLeast(0)
             layout(contentWidth + 2 * padPx, height) {
                 var y = 0
                 lines.forEachIndexed { i, line ->
