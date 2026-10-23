@@ -452,6 +452,133 @@ class ProducerViewModelTranscriptTest : ProducerViewModelTestBase() {
         }
 
     @Test
+    fun voiceStartsAPendingUserLineBeforeAnyTranscript() =
+        runTest {
+            val vm = viewModel()
+            advanceUntilIdle()
+            agent.state.value = AgentState.Listening
+            runCurrent()
+            agent.events.emit(AgentEvent.VadScore(0.9f))
+            runCurrent()
+            assertEquals("", vm.state.value.liveUserText)
+            agent.events.emit(AgentEvent.UserTranscript("make it brighter"))
+            runCurrent()
+            assertNull(vm.state.value.liveUserText)
+            assertEquals(listOf<TranscriptItem>(TranscriptItem.User(0, "make it brighter")), vm.lines())
+            agent.state.value = AgentState.Disconnected
+            advanceTimeBy(60)
+        }
+
+    @Test
+    fun quietVoiceStartsNoPendingUserLine() =
+        runTest {
+            val vm = viewModel()
+            advanceUntilIdle()
+            agent.state.value = AgentState.Listening
+            runCurrent()
+            agent.events.emit(AgentEvent.VadScore(0.2f))
+            runCurrent()
+            assertNull(vm.state.value.liveUserText)
+            agent.state.value = AgentState.Disconnected
+            advanceTimeBy(60)
+        }
+
+    @Test
+    fun voiceKeepsTheTentativeText() =
+        runTest {
+            val vm = viewModel()
+            advanceUntilIdle()
+            agent.state.value = AgentState.Listening
+            runCurrent()
+            agent.events.emit(AgentEvent.TentativeTranscript("make"))
+            agent.events.emit(AgentEvent.VadScore(0.9f))
+            runCurrent()
+            assertEquals("make", vm.state.value.liveUserText)
+            agent.state.value = AgentState.Disconnected
+            advanceTimeBy(60)
+        }
+
+    @Test
+    fun voiceWhileTheAgentSpeaksStartsNoPendingUserLine() =
+        runTest {
+            val vm = viewModel()
+            advanceUntilIdle()
+            agent.state.value = AgentState.Speaking
+            runCurrent()
+            agent.events.emit(AgentEvent.VadScore(0.9f))
+            runCurrent()
+            assertNull(vm.state.value.liveUserText)
+            agent.state.value = AgentState.Disconnected
+            advanceTimeBy(60)
+        }
+
+    @Test
+    fun mutedMicStartsNoPendingUserLine() =
+        runTest {
+            val vm = viewModel()
+            advanceUntilIdle()
+            agent.state.value = AgentState.Listening
+            runCurrent()
+            vm.onIntent(ProducerIntent.ToggleMic)
+            agent.events.emit(AgentEvent.VadScore(0.9f))
+            runCurrent()
+            assertNull(vm.state.value.liveUserText)
+            agent.state.value = AgentState.Disconnected
+            advanceTimeBy(60)
+        }
+
+    @Test
+    fun mutingClearsThePendingUserLine() =
+        runTest {
+            val vm = viewModel()
+            advanceUntilIdle()
+            agent.state.value = AgentState.Listening
+            runCurrent()
+            agent.events.emit(AgentEvent.VadScore(0.9f))
+            runCurrent()
+            vm.onIntent(ProducerIntent.ToggleMic)
+            runCurrent()
+            assertNull(vm.state.value.liveUserText)
+            agent.state.value = AgentState.Disconnected
+            advanceTimeBy(60)
+        }
+
+    @Test
+    fun pendingUserLineGoesAwayWhenNothingIsTranscribed() =
+        runTest {
+            val vm = viewModel()
+            advanceUntilIdle()
+            agent.state.value = AgentState.Listening
+            runCurrent()
+            agent.events.emit(AgentEvent.VadScore(0.9f))
+            runCurrent()
+            advanceTimeBy(3_900)
+            assertEquals("", vm.state.value.liveUserText)
+            advanceTimeBy(200)
+            assertNull(vm.state.value.liveUserText)
+            agent.state.value = AgentState.Disconnected
+            advanceTimeBy(60)
+        }
+
+    @Test
+    fun pendingUserLineWaitsWhileTheUserKeepsTalking() =
+        runTest {
+            val vm = viewModel()
+            advanceUntilIdle()
+            agent.state.value = AgentState.Listening
+            runCurrent()
+            agent.events.emit(AgentEvent.VadScore(0.9f))
+            runCurrent()
+            advanceTimeBy(3_000)
+            agent.events.emit(AgentEvent.VadScore(0.9f))
+            runCurrent()
+            advanceTimeBy(3_000)
+            assertEquals("", vm.state.value.liveUserText)
+            agent.state.value = AgentState.Disconnected
+            advanceTimeBy(60)
+        }
+
+    @Test
     fun liveUserTextClearedWhenTheSessionEnds() =
         runTest {
             val vm = viewModel()
