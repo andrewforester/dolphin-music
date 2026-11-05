@@ -74,7 +74,9 @@ import kotlin.math.roundToInt
 
 private val MicIntoNavBar = 8.dp
 
-private val OrbBlockLift = 4.dp
+private val ErrorOverChat = 52.dp
+
+private val OrbBlockLift = 8.dp
 
 @Composable
 fun ProducerScreen(
@@ -110,7 +112,11 @@ fun ProducerScreen(
                     agentConnected = state.agent.state != AgentState.Disconnected,
                     agentSpeaking = state.agent.state == AgentState.Speaking,
                     speech = state.agentSpeech,
+                    bottomInset = if (state.agent.error != null) ErrorOverChat else 0.dp,
                 )
+                state.agent.error?.let {
+                    ErrorLine(it, tag = "agent-error", modifier = Modifier.align(Alignment.BottomCenter).padding(10.dp))
+                }
             }
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Box(Modifier.padding(horizontal = 16.dp)) { TrackCard(state, positionMs, onIntent) }
@@ -128,7 +134,6 @@ fun ProducerScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                state.agent.error?.let { ErrorLine(it, tag = "agent-error") }
                 if (!state.micPermission) TextInputRow(onSend = { onIntent(ProducerIntent.SendText(it)) })
                 OrbHome(state, onPlaced = { orbHome = it })
             }
@@ -267,6 +272,7 @@ private fun Pills(
 ) {
     PillRows(
         contentPadding = 16.dp,
+        minLines = 2,
         modifier =
             Modifier
                 .heightIn(min = 22.dp)

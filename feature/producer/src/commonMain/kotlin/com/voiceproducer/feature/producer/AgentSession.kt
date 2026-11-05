@@ -49,6 +49,8 @@ internal class AgentSession(
 
     private val replySpeech = ReplySpeech(state)
 
+    private val pendingLine = PendingUserLine(state, scope)
+
     fun toggle() {
         state.update { it.copy(agent = it.agent.copy(error = null)) }
         val connecting = agentJob?.takeIf { it.isActive }
@@ -117,7 +119,13 @@ internal class AgentSession(
         if (agent.state.value.let { it == AgentState.Listening || it == AgentState.Speaking }) {
             val muted = !state.value.agent.micMuted
             agent.setMicMuted(muted)
-            state.update { it.copy(agent = it.agent.copy(micMuted = muted), userVoiceLevel = 0f) }
+            state.update {
+                it.copy(
+                    agent = it.agent.copy(micMuted = muted),
+                    userVoiceLevel = 0f,
+                    liveUserText = it.liveUserText.takeUnless { text -> muted && text == "" },
+                )
+            }
         }
     }
 
@@ -168,6 +176,7 @@ internal class AgentSession(
 
             is AgentEvent.VadScore -> {
                 duck.onVadScore(event.score)
+                pendingLine.onVoice()
             }
 
             is AgentEvent.TentativeTranscript -> {

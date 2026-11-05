@@ -75,7 +75,7 @@ internal val listeningDuckedPreviewState =
         liveUserText = "and drop the vocals in the",
     )
 
-internal val hearingYouPreviewState = listeningDuckedPreviewState.copy(userVoiceLevel = 0.9f)
+internal val hearingYouPreviewState = listeningDuckedPreviewState.copy(userVoiceLevel = 0.9f, liveUserText = "")
 
 internal val connectingPreviewState = emptyPreviewState.copy(agentActivity = AgentActivity.Connecting)
 
